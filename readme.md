@@ -55,4 +55,3 @@ http://localhost:3000/v1/api/auth/register
 
 ```
 
-> Nota: esto es una estructura base, comprobar las funciones que son utiles para el proyecto a realizar, las que no se usen remover para mantener un código limpio.

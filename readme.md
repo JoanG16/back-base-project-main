@@ -1,8 +1,5 @@
-# Base Project Node.js
-
-Proyecto base para aplicaciones Node.js con Express, siguiendo arquitectura limpia y mejores prácticas.
-
-🎮 ZGames 🎮
+# Project
+Proyecto de App Web para el Mercado Nuevo Tarqui.
 
 ## 🚀 Características
 
@@ -12,14 +9,12 @@ Proyecto base para aplicaciones Node.js con Express, siguiendo arquitectura limp
 - Manejo de errores centralizado
 - Middleware de autenticación
 - Documentación con Swagger
-- Base de datos MongoDB
+- Base de datos Postgrest
 
 ## 🛠️ Tecnologías
 
 - Node.js
 - Express
-- MongoDB
-- Mongoose
 - Joi
 - Awilix
 - JWT

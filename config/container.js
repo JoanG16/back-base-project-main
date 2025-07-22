@@ -40,6 +40,7 @@ const DownloadProductos = require('../routes/api/v1.productos');
 const DownloadCategorias = require('../routes/api/v1.categorias');
 const DownloadOfertas = require('../routes/api/v1.oferta');
 const DownloadAuth = require('../routes/api/v1.auth');
+const cloudinaryService = require('../services/cloudinary.service');
 
 const config = {
   PORT: process.env.PORT || 3000,
@@ -95,7 +96,7 @@ container
     CategoriaService: asClass(CategoriaService).singleton(),
     OfertaService: asClass(OfertaService).singleton(),
     AuthService: asClass(AuthService).inject(() => ({ UserModel: container.resolve('UserModel') })).singleton(),
-    CloudinaryService: asClass(CloudinaryService).singleton(),
+    CloudinaryService: asClass(cloudinaryService).singleton(),
   })
   .register({
     SocioController: asClass(SocioController.bind(SocioController)).singleton(),

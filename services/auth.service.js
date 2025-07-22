@@ -1,66 +1,65 @@
-const BaseService = require('./base.service');
-const catchServiceAsync = require('../utils/catch-service-async');
-const bcrypt = require('bcryptjs');
+// src/services/auth.service.js
 const jwt = require('jsonwebtoken');
-const AppError = require('../utils/app-error');
+const catchServiceAsync = require('../utils/catch-service-async');
 
-let _user = null;
-let _authUtils = null;
-let _authFunction = null;
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_dev';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 
-module.exports = class AuthService extends BaseService {
-  constructor({ User, AuthUtils }) {
-    super(User);
-    _user = User;
-    _authUtils = AuthUtils;
+let _userModel = null; // Variable interna para almacenar el modelo de usuario
+
+module.exports = class AuthService {
+  // ¡IMPORTANTE! Asegúrate de que el parámetro sea { UserModel }
+  constructor({ UserModel }) {
+    _userModel = UserModel;
   }
 
-  login = catchServiceAsync(async (username, password) => {
-    const user = await _user.findOne({ username });
+  /**
+   * Registra un nuevo usuario (opcional, solo para configurar administradores iniciales).
+   */
+  registerUser = catchServiceAsync(async (userData) => {
+    const { username, password, role } = userData;
+
+    const existingUser = await _userModel.findOne({ where: { username } });
+    if (existingUser) {
+      throw new Error('El nombre de usuario ya existe.');
+    }
+
+    const newUser = await _userModel.create({ username, password, role });
+    return { data: { id_user: newUser.id_user, username: newUser.username, role: newUser.role } };
+  });
+
+  /**
+   * Autentica a un usuario y genera un JWT.
+   */
+  loginUser = catchServiceAsync(async (username, password) => {
+    // 1. Buscar el usuario por nombre de usuario
+    const user = await _userModel.findOne({ where: { username } });
     if (!user) {
-      throw new AppError('Usuario o contraseña incorrectos', 401);
+      throw new Error('Credenciales inválidas: Usuario no encontrado.');
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      throw new AppError('Usuario o contraseña incorrectos', 401);
+    // 2. Comparar la contraseña proporcionada con la contraseña hasheada en la BD
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      throw new Error('Credenciales inválidas: Contraseña incorrecta.');
     }
 
-    const token = _authUtils.generateToken(user._id);
+    // 3. Si las credenciales son válidas, generar un JWT
+    const token = jwt.sign(
+      { id: user.id_user, username: user.username, role: user.role },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
 
     return {
       data: {
-        _id: user._id,
-        username: user.username,
         token,
+        user: {
+          id_user: user.id_user,
+          username: user.username,
+          role: user.role,
+        },
       },
     };
-  });
-
-  register = catchServiceAsync(async (userData) => {
-    const existingUser = await _user.findOne({
-      username: userData.username,
-    });
-
-    if (existingUser) {
-      throw new AppError('Usuario ya existe', 400);
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(userData.password, salt);
-
-    const user = await _user.create({
-      ...userData,
-      password: hashedPassword,
-    });
-
-    return {
-      id: user._id,
-      username: user.username,
-    };
-  });
-
-  logout = catchServiceAsync(async () => {
-    return { message: 'Sesión cerrada exitosamente' };
   });
 };

@@ -5,24 +5,28 @@ const path = require('path');
 
 let _express = null;
 let _config = null;
-let _server = null; // Declarada a nivel de módulo para ser accesible por start()
+let _server = null;
 
 module.exports = class Server {
   constructor({ config, router }) {
     console.log('[Server CONSTRUCTOR DEBUG] Iniciando constructor de Server...');
 
-    _config = config; // Asigna el config pasado por Awilix
-    _express = express(); // Inicializa la instancia de Express
+    _config = config;
+
+    _express = express();
 
     // Middlewares globales aplicados a la instancia de Express
+    // MODIFICACIÓN CLAVE: Origen de CORS configurable a través de _config.FRONTEND_URL
+    const corsOrigin = _config.FRONTEND_URL || 'http://localhost:4200'; // Usa la URL del frontend de config, fallback a localhost
+    console.log(`[Server DEBUG] Configurando CORS con origen: ${corsOrigin}`);
     _express.use(require('cors')({
-      origin: 'http://localhost:4200', // Tu frontend
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      origin: corsOrigin,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Añadido PATCH, común para actualizaciones parciales
       credentials: true
     }));
-    _express.use(require('morgan')('dev')); // Logger de peticiones
-    _express.use(express.json({ limit: '50mb' })); // Body-parser para JSON con límite alto
-    _express.use(express.urlencoded({ limit: '50mb', extended: true })); // Body-parser para URL-encoded con límite alto
+    _express.use(require('morgan')('dev')); // Logger de peticiones en consola
+    _express.use(express.json({ limit: '50mb' })); // Body-parser para JSON con límite de 50MB
+    _express.use(express.urlencoded({ limit: '50mb', extended: true })); // Body-parser para URL-encoded con límite de 50MB
 
     // Configuración para servir archivos estáticos (imágenes)
     // Usa process.cwd() para asegurar que la ruta se resuelve desde la raíz del proyecto
@@ -32,16 +36,16 @@ module.exports = class Server {
 
     _express.use(router); // Monta todas las rutas de tu API
 
-    // ¡¡¡CAMBIO CLAVE!!! Inicializa _server aquí, después de que _express esté completamente configurado
+    // Inicializa _server aquí, después de que _express esté completamente configurado
     _server = http.createServer(_express);
   }
 
   start() {
     return new Promise((resolve, reject) => {
-      // Intenta escuchar en el puerto configurado
+      // Intenta escuchar en el puerto configurado (que vendrá de Render en producción)
       _server.listen(_config.PORT, async () => {
         console.log(
-          `${_config.APPLICATION_NAME} on port ${_config.PORT} ${_config.API_URL} `
+          `${_config.APPLICATION_NAME} en puerto ${_config.PORT} API_URL: ${_config.API_URL} FRONTEND_URL: ${_config.FRONTEND_URL}`
         );
         resolve(); // Resuelve la promesa una vez que el servidor está escuchando
       }).on('error', (err) => { // Captura errores si el servidor no puede iniciar

@@ -1,29 +1,31 @@
-/* const { appResponse } = require('../utils/app-response');
-const catchControllerAsync = require('../utils/catch-controller-async');
-const BaseController = require('./base.controller');
+// src/controllers/auth.controller.js
+const catchControllerAsync = require('../utils/catch-controller-async'); // Asegúrate de tener este util
+const { appResponse } = require('../utils/app-response'); // Asegúrate de tener este util
 
 let _authService = null;
-module.exports = class AuthController extends BaseController {
+
+module.exports = class AuthController {
   constructor({ AuthService }) {
-    super(AuthService);
     _authService = AuthService;
   }
 
+  /**
+   * Endpoint para registrar un nuevo usuario.
+   * Solo para fines de prueba o setup inicial. En producción, esto debería ser más controlado.
+   */
   register = catchControllerAsync(async (req, res) => {
-    const { body } = req;
-    const result = await _authService.register(body);
-    return appResponse(res, result);
+    const { username, password, role } = req.body;
+    const result = await _authService.registerUser({ username, password, role });
+    return appResponse(res, { data: result.data, statusCode: 201, message: 'Usuario registrado exitosamente.' });
   });
 
+  /**
+   * Endpoint para iniciar sesión.
+   */
   login = catchControllerAsync(async (req, res) => {
     const { username, password } = req.body;
-    const result = await _authService.login(username, password);
-    return appResponse(res, result);
-  });
-
-  logout = catchControllerAsync(async (req, res) => {
-    const result = await _authService.logout();
-    return appResponse(res, result);
+    const result = await _authService.loginUser(username, password);
+    // El servicio ya devuelve el token y el usuario en 'data'
+    return appResponse(res, { data: result.data, message: 'Inicio de sesión exitoso.' });
   });
 };
- */

@@ -4,19 +4,23 @@ const http = require('http');
 const path = require('path');
 
 let _express = null;
-let _config = null;
-let _server = null; // Declarada a nivel de módulo para ser accesible por start()
+let _config = null; // Mantenemos _config por si se usa para otras configuraciones
+let _server = null;
 
 module.exports = class Server {
   constructor({ config, router }) {
     console.log('[Server CONSTRUCTOR DEBUG] Iniciando constructor de Server...');
 
     _config = config; // Asigna el config pasado por Awilix
+
     _express = express(); // Inicializa la instancia de Express
 
     // Middlewares globales aplicados a la instancia de Express
     _express.use(require('cors')({
-      origin: 'http://localhost:4200', // Tu frontend
+      // CAMBIO CLAVE: Usar process.env.FRONTEND_URL directamente para CORS
+      // Esto asegura que se use la variable de entorno de Render si está presente.
+      // Se mantiene el fallback a localhost para desarrollo local.
+      origin: process.env.FRONTEND_URL || 'http://localhost:4200',
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
       credentials: true
     }));
@@ -40,8 +44,10 @@ module.exports = class Server {
     return new Promise((resolve, reject) => {
       // Intenta escuchar en el puerto configurado
       _server.listen(_config.PORT, async () => {
+        // CAMBIO CLAVE: Loggear API_URL y FRONTEND_URL directamente desde process.env
+        // Esto nos ayudará a confirmar si Render está inyectando las variables correctamente.
         console.log(
-          `${_config.APPLICATION_NAME} on port ${_config.PORT} ${_config.API_URL} `
+          `${_config.APPLICATION_NAME} on port ${_config.PORT} API_URL: ${process.env.API_URL} FRONTEND_URL: ${process.env.FRONTEND_URL}`
         );
         resolve(); // Resuelve la promesa una vez que el servidor está escuchando
       }).on('error', (err) => { // Captura errores si el servidor no puede iniciar

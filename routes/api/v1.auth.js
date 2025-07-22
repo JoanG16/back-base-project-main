@@ -1,23 +1,11 @@
-/* const { Router } = require('express');
-const { UserValidator } = require('../../utils/validators');
+// src/routes/api/v1.auth.js
+const { Router } = require('express');
 
-module.exports = function ({ AuthController, JoiValidatorMiddleware }) {
+module.exports = function ({ AuthController }) {
   const router = Router();
 
-  router.post(
-    '/register',
-    JoiValidatorMiddleware(UserValidator.register),
-    AuthController.register
-  );
-
-  router.post(
-    '/login',
-    JoiValidatorMiddleware(UserValidator.login),
-    AuthController.login
-  );
-
-  router.post('/logout', AuthController.logout);
+  router.post('/register', AuthController.register); // Ruta para registrar un usuario (solo para setup/pruebas)
+  router.post('/login', AuthController.login);     // Ruta para iniciar sesión
 
   return router;
 };
- */

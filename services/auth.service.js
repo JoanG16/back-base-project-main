@@ -3,7 +3,10 @@ const jwt = require('jsonwebtoken');
 const catchServiceAsync = require('../utils/catch-service-async');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_dev';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1d';
+
+
+
 
 let _userModel = null; // Variable interna para almacenar el modelo de usuario
 

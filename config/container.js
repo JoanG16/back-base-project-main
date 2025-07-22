@@ -1,3 +1,4 @@
+// config/container.js
 const { createContainer, asClass, asFunction, asValue } = require('awilix');
 
 const Routes = require('../routes');
@@ -20,6 +21,7 @@ const ProductoService = require('../services/productos.service');
 const CategoriaService = require('../services/categorias.service');
 const OfertaService = require('../services/oferta.service');
 const AuthService = require('../services/auth.service');
+const CloudinaryService = require('../services/cloudinary.service'); // <-- NUEVA IMPORTACIÓN
 
 // Controladores
 const SocioController = require('../controllers/socio.controller');
@@ -83,11 +85,17 @@ container
   .register({
     SocioService: asClass(SocioService).singleton(),
     ContenedorService: asClass(ContenedorService).singleton(),
-    LocalService: asClass(LocalService).singleton(),
+    // --- CAMBIO CLAVE AQUÍ: Inyectar LocalModel y CloudinaryService en LocalService ---
+    LocalService: asClass(LocalService).inject(() => ({
+      LocalModel: container.resolve('LocalModel'),
+      CloudinaryService: container.resolve('CloudinaryService')
+    })).singleton(),
+    // ----------------------------------------------------------------------------------
     ProductoService: asClass(ProductoService).singleton(),
     CategoriaService: asClass(CategoriaService).singleton(),
     OfertaService: asClass(OfertaService).singleton(),
     AuthService: asClass(AuthService).inject(() => ({ UserModel: container.resolve('UserModel') })).singleton(),
+    CloudinaryService: asClass(CloudinaryService).singleton(),
   })
   .register({
     SocioController: asClass(SocioController.bind(SocioController)).singleton(),

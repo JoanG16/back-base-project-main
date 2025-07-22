@@ -60,4 +60,4 @@ class CloudinaryService {
     }
 }
 
-module.exports = new CloudinaryService();
+module.exports = CloudinaryService;

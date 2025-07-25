@@ -1,3 +1,4 @@
+// src/models/locales.model.js
 const { DataTypes } = require('sequelize');
 const { postgresConnection } = require('../startup/database');
 const ContenedorModel = require('./contenedor.models');
@@ -22,15 +23,15 @@ const LocalModel = postgresConnection.define('Local', {
     allowNull: false,
   },
   facebook: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
     allowNull: true,
   },
   instagram: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
     allowNull: true,
   },
   tiktok: {
-    type: DataTypes.STRING(255),
+    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
     allowNull: true,
   },
   telefono: {
@@ -50,14 +51,13 @@ const LocalModel = postgresConnection.define('Local', {
     defaultValue: DataTypes.NOW,
   },
   imagen_urls: {
-    type: DataTypes.ARRAY(DataTypes.STRING),
+    type: DataTypes.ARRAY(DataTypes.TEXT),
     allowNull: true,
     defaultValue: [],
   },
-  // NUEVO CAMPO: Descripción del local
   descripcion: {
-    type: DataTypes.TEXT, // Usamos TEXT para descripciones más largas
-    allowNull: true, // Puede ser nulo
+    type: DataTypes.TEXT,
+    allowNull: true,
   }
 }, {
   tableName: 'locales',

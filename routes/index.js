@@ -1,3 +1,4 @@
+// routes/index.js
 const { Router } = require('express');
 const AuthMiddleware = require('../middleware/auth.middleware'); // Importar el middleware de autenticación
 
@@ -9,12 +10,14 @@ module.exports = function ({
   DownloadCategorias,
   DownloadOfertas,
   DownloadAuth,
+  DownloadUser, // <-- NUEVO: Importar la ruta de usuario
   SocioController, // Necesitamos acceso directo a los controladores para rutas específicas
   ContenedorController,
   LocalController,
   ProductoController,
   CategoriaController,
-  OfertaController
+  OfertaController,
+  UserController, // <-- NUEVO: Importar el controlador de usuario
 }) {
   const router = Router();
   const apiRouter = Router();
@@ -37,22 +40,20 @@ module.exports = function ({
   apiRouter.get('/categorias/get-all', CategoriaController.getAllCategorias);
   apiRouter.get('/ofertas/get-all', OfertaController.getAllOfertas);
   apiRouter.get('/locales/get-one/:id', LocalController.getOneLocal);
-  // Opcional: Si hay alguna ruta GET ONE que deba ser pública (ej. ver detalle de un local específico sin login)
-  // apiRouter.get('/locales/get-one/:id', LocalController.getOneLocal);
+  apiRouter.get('/users/get-all', UserController.getAllUsers); 
+  apiRouter.get('/users/get-one/:id', UserController.getOneUser);
 
   // --- APLICAR MIDDLEWARE DE AUTENTICACIÓN PARA LAS RUTAS PROTEGIDAS ---
   apiRouter.use(AuthMiddleware); // Todas las rutas definidas DESPUÉS de esta línea requerirán un JWT válido
 
   // --- RUTAS PROTEGIDAS (REQUIEREN AUTENTICACIÓN) ---
-  // Ahora, las rutas de DownloadX se montarán y solo expondrán las operaciones que requieren autenticación.
-  // Esto significa que DownloadX solo debe contener las rutas POST, PUT, DELETE y GET ONE (si no es pública).
-  // Si tus DownloadX actuales tienen 'get-all', se ignorará porque ya lo definimos como público arriba.
   apiRouter.use('/socios', DownloadSocios);
   apiRouter.use('/contenedores', DownloadContenedor);
   apiRouter.use('/locales', DownloadLocales);
   apiRouter.use('/productos', DownloadProductos);
   apiRouter.use('/categorias', DownloadCategorias);
   apiRouter.use('/ofertas', DownloadOfertas);
+  apiRouter.use('/users', DownloadUser); // <-- NUEVO: Montar las rutas protegidas del usuario
 
   router.use('/v1/api', apiRouter);
 

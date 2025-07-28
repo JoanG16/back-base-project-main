@@ -21,7 +21,8 @@ const ProductoService = require('../services/productos.service');
 const CategoriaService = require('../services/categorias.service');
 const OfertaService = require('../services/oferta.service');
 const AuthService = require('../services/auth.service');
-const CloudinaryService = require('../services/cloudinary.service'); // <-- Importación correcta de la clase CloudinaryService
+const CloudinaryService = require('../services/cloudinary.service');
+const UserService = require('../services/user.service'); // <-- NUEVO
 
 // Controladores
 const SocioController = require('../controllers/socio.controller');
@@ -31,6 +32,7 @@ const ProductoController = require('../controllers/productos.controller');
 const CategoriaController = require('../controllers/categorias.controller');
 const OfertaController = require('../controllers/oferta.controller');
 const AuthController = require('../controllers/auth.controller');
+const UserController = require('../controllers/user.controller'); // <-- NUEVO
 
 // Rutas (routers de API v1)
 const DownloadSocios = require('../routes/api/v1.socio');
@@ -40,7 +42,7 @@ const DownloadProductos = require('../routes/api/v1.productos');
 const DownloadCategorias = require('../routes/api/v1.categorias');
 const DownloadOfertas = require('../routes/api/v1.oferta');
 const DownloadAuth = require('../routes/api/v1.auth');
-// Se eliminó la importación duplicada 'const cloudinaryService = require('../services/cloudinary.service');'
+const DownloadUser = require('../routes/api/v1.user'); // <-- NUEVO
 
 const config = {
   PORT: process.env.PORT || 3000,
@@ -54,7 +56,6 @@ const container = createContainer();
 
 container
   .register({
-    // Modificar Routes para inyectar los controladores necesarios para las rutas públicas
     router: asFunction(Routes).inject(() => ({
       DownloadSocios: container.resolve('DownloadSocios'),
       DownloadContenedor: container.resolve('DownloadContenedor'),
@@ -63,13 +64,15 @@ container
       DownloadCategorias: container.resolve('DownloadCategorias'),
       DownloadOfertas: container.resolve('DownloadOfertas'),
       DownloadAuth: container.resolve('DownloadAuth'),
-      // Inyectar controladores directamente para las rutas GET ALL públicas
+      DownloadUser: container.resolve('DownloadUser'), // <-- NUEVO: Inyectar la ruta de usuario
+      // Inyectar controladores directamente para las rutas GET ALL
       SocioController: container.resolve('SocioController'),
       ContenedorController: container.resolve('ContenedorController'),
       LocalController: container.resolve('LocalController'),
       ProductoController: container.resolve('ProductoController'),
       CategoriaController: container.resolve('CategoriaController'),
-      OfertaController: container.resolve('OfertaController')
+      OfertaController: container.resolve('OfertaController'),
+      UserController: container.resolve('UserController'), // <-- NUEVO: Inyectar el controlador de usuario
     })).singleton(),
     Server: asClass(Server).singleton(),
     config: asValue(config),
@@ -86,17 +89,19 @@ container
   .register({
     SocioService: asClass(SocioService).singleton(),
     ContenedorService: asClass(ContenedorService).singleton(),
-    // --- CAMBIO CLAVE AQUÍ: Inyectar LocalModel y CloudinaryService en LocalService ---
     LocalService: asClass(LocalService).inject(() => ({
       LocalModel: container.resolve('LocalModel'),
       CloudinaryService: container.resolve('CloudinaryService')
     })).singleton(),
-    // ----------------------------------------------------------------------------------
     ProductoService: asClass(ProductoService).singleton(),
     CategoriaService: asClass(CategoriaService).singleton(),
     OfertaService: asClass(OfertaService).singleton(),
     AuthService: asClass(AuthService).inject(() => ({ UserModel: container.resolve('UserModel') })).singleton(),
-    CloudinaryService: asClass(CloudinaryService).singleton(), // <-- Ahora usa la variable CloudinaryService (con 'C' mayúscula)
+    CloudinaryService: asClass(CloudinaryService).singleton(),
+    UserService: asClass(UserService).inject(() => ({ // <-- NUEVO
+      UserModel: container.resolve('UserModel'),
+      LocalModel: container.resolve('LocalModel')
+    })).singleton(),
   })
   .register({
     SocioController: asClass(SocioController.bind(SocioController)).singleton(),
@@ -106,6 +111,9 @@ container
     CategoriaController: asClass(CategoriaController.bind(CategoriaController)).singleton(),
     OfertaController: asClass(OfertaController.bind(OfertaController)).singleton(),
     AuthController: asClass(AuthController.bind(AuthController)).singleton(),
+    UserController: asClass(UserController.bind(UserController)).inject(() => ({ // <-- NUEVO
+      UserService: container.resolve('UserService')
+    })).singleton(),
   })
   .register({
     DownloadSocios: asFunction(DownloadSocios).singleton(),
@@ -115,6 +123,9 @@ container
     DownloadCategorias: asFunction(DownloadCategorias).singleton(),
     DownloadOfertas: asFunction(DownloadOfertas).singleton(),
     DownloadAuth: asFunction(DownloadAuth).singleton(),
+    DownloadUser: asFunction(DownloadUser).inject(() => ({ // <-- NUEVO
+      UserController: container.resolve('UserController')
+    })).singleton(),
   });
 
 module.exports = container;

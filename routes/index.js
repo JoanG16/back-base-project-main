@@ -10,14 +10,14 @@ module.exports = function ({
   DownloadCategorias,
   DownloadOfertas,
   DownloadAuth,
-  DownloadUser, // <-- NUEVO: Importar la ruta de usuario
-  SocioController, // Necesitamos acceso directo a los controladores para rutas específicas
+  DownloadUser,
+  SocioController,
   ContenedorController,
   LocalController,
   ProductoController,
   CategoriaController,
   OfertaController,
-  UserController, // <-- NUEVO: Importar el controlador de usuario
+  UserController,
 }) {
   const router = Router();
   const apiRouter = Router();
@@ -30,7 +30,8 @@ module.exports = function ({
     .use(require('express').urlencoded({ extended: true }));
 
   // --- RUTAS PÚBLICAS (NO REQUIEREN AUTENTICACIÓN) ---
-  apiRouter.use('/auth', DownloadAuth); // Rutas de autenticación (login, register)
+  // Las rutas de autenticación, como login y forgot-password, deben ser públicas.
+  apiRouter.use('/auth', DownloadAuth);
 
   // Rutas GET ALL para datos públicos (mapa, listados generales)
   apiRouter.get('/contenedores/get-all', ContenedorController.getAllContenedores);
@@ -40,20 +41,23 @@ module.exports = function ({
   apiRouter.get('/categorias/get-all', CategoriaController.getAllCategorias);
   apiRouter.get('/ofertas/get-all', OfertaController.getAllOfertas);
   apiRouter.get('/locales/get-one/:id', LocalController.getOneLocal);
-  apiRouter.get('/users/get-all', UserController.getAllUsers); 
+  apiRouter.get('/users/get-all', UserController.getAllUsers);
   apiRouter.get('/users/get-one/:id', UserController.getOneUser);
 
-  // --- APLICAR MIDDLEWARE DE AUTENTICACIÓN PARA LAS RUTAS PROTEGIDAS ---
-  apiRouter.use(AuthMiddleware); // Todas las rutas definidas DESPUÉS de esta línea requerirán un JWT válido
-
   // --- RUTAS PROTEGIDAS (REQUIEREN AUTENTICACIÓN) ---
-  apiRouter.use('/socios', DownloadSocios);
-  apiRouter.use('/contenedores', DownloadContenedor);
-  apiRouter.use('/locales', DownloadLocales);
-  apiRouter.use('/productos', DownloadProductos);
-  apiRouter.use('/categorias', DownloadCategorias);
-  apiRouter.use('/ofertas', DownloadOfertas);
-  apiRouter.use('/users', DownloadUser); // <-- NUEVO: Montar las rutas protegidas del usuario
+  // Aplicamos el middleware de autenticación solo a las rutas que lo necesitan.
+  apiRouter.use('/socios', AuthMiddleware, DownloadSocios);
+  apiRouter.use('/contenedores', AuthMiddleware, DownloadContenedor);
+  apiRouter.use('/locales', AuthMiddleware, DownloadLocales);
+  apiRouter.use('/productos', AuthMiddleware, DownloadProductos);
+  apiRouter.use('/categorias', AuthMiddleware, DownloadCategorias);
+  apiRouter.use('/ofertas', AuthMiddleware, DownloadOfertas);
+  apiRouter.use('/users', AuthMiddleware, DownloadUser);
+
+  // NOTA IMPORTANTE:
+  // La línea "apiRouter.use(AuthMiddleware);" DEBE ser eliminada.
+  // La nueva sintaxis "apiRouter.use('/ruta', AuthMiddleware, router_de_ruta)"
+  // ya aplica el middleware a todas las sub-rutas de manera más granular.
 
   router.use('/v1/api', apiRouter);
 

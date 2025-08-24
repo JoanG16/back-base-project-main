@@ -7,14 +7,16 @@ let _express = null;
 let _config = null;
 let _server = null;
 
+// Directorio donde se construyeron los archivos de Angular
+const frontendPath = path.join(__dirname, '..', '..', 'dist');
+
 module.exports = class Server {
   constructor({ config, router }) {
     console.log('[Server CONSTRUCTOR DEBUG] Iniciando constructor de Server...');
-
     _config = config;
-
     _express = express();
 
+    // Configuración de CORS
     _express.use(require('cors')({
       origin: process.env.FRONTEND_URL || 'http://localhost:4200',
       methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -24,11 +26,15 @@ module.exports = class Server {
     _express.use(express.json({ limit: '50mb' }));
     _express.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-    // COMENTA O ELIMINA ESTAS LÍNEAS SI YA NO SIRVES IMÁGENES SUBIDAS LOCALMENTE
-    // const PUBLIC_UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
-    // console.log(`[Server DEBUG] Sirviendo archivos estáticos desde: ${PUBLIC_UPLOADS_DIR}`);
-    // _express.use('/uploads', express.static(PUBLIC_UPLOADS_DIR)); // Monta la carpeta 'uploads' bajo la URL '/uploads'
+    // Sirviendo los archivos estáticos de la aplicación Angular
+    _express.use(express.static(frontendPath));
 
+    // Ruta comodín para que Angular Router maneje todas las rutas del frontend
+    _express.get('*', (req, res) => {
+      res.sendFile(path.join(frontendPath, 'index.html'));
+    });
+
+    // Rutas de la API (DEBEN IR DESPUÉS DE LAS RUTAS ESTÁTICAS)
     _express.use(router);
 
     _server = http.createServer(_express);

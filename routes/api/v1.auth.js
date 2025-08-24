@@ -1,11 +1,21 @@
-// src/routes/api/v1.auth.js
 const { Router } = require('express');
 
 module.exports = function ({ AuthController }) {
-  const router = Router();
+  const router = Router();
 
-  router.post('/register', AuthController.register); // Ruta para registrar un usuario (solo para setup/pruebas)
-  router.post('/login', AuthController.login);     // Ruta para iniciar sesión
+  // Ruta para registrar un usuario
+  router.post('/register', AuthController.register);
 
-  return router;
+  // Ruta para iniciar sesión
+  router.post('/login', AuthController.login);
+
+  // NUEVA RUTA: Inicia el proceso de recuperación de contraseña
+  // Recibe el correo electrónico del usuario.
+  router.post('/forgot-password', AuthController.forgotPassword);
+
+  // NUEVA RUTA: Restablece la contraseña usando el token
+  // Recibe el token de la URL y la nueva contraseña en el cuerpo.
+  router.post('/reset-password/:token', AuthController.resetPassword);
+
+  return router;
 };

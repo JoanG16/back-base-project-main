@@ -104,41 +104,48 @@ module.exports = class AuthService {
 
   /**
    * Inicia el proceso de recuperación de contraseña.
+   * CORREGIDO: Se elimina el 'return' silencioso. El flujo continúa si el usuario no existe.
    */
   forgotPassword = catchServiceAsync(async (email) => {
     const user = await _userModel.findOne({ where: { email } });
-    if (!user) return;
+    // La lógica del envío del correo solo se ejecuta si el usuario existe.
+    // Si no existe, la función no hace nada y termina, lo cual es seguro.
+    if (user) {
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpires = new Date(Date.now() + 3600000);
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000);
+      await user.update({
+        reset_password_token: resetToken,
+        reset_password_expires: resetExpires,
+      });
 
-    await user.update({
-      reset_password_token: resetToken,
-      reset_password_expires: resetExpires,
-    });
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: EMAIL_USER,
+          pass: EMAIL_PASS,
+        },
+      });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-    });
+      const mailOptions = {
+        from: EMAIL_USER,
+        to: user.email,
+        subject: 'Recuperación de contraseña',
+        html: `
+          <h2>Recuperación de Contraseña</h2>
+          <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+          <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
+          <p>Este enlace expirará en 1 hora.</p>
+          <p>Si no solicitaste esto, ignora este correo.</p>
+        `,
+      };
 
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: user.email,
-      subject: 'Recuperación de contraseña',
-      html: `
-        <h2>Recuperación de Contraseña</h2>
-        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
-        <p>Este enlace expirará en 1 hora.</p>
-        <p>Si no solicitaste esto, ignora este correo.</p>
-      `,
-    };
+      await transporter.sendMail(mailOptions);
+    }
 
-    await transporter.sendMail(mailOptions);
+    // Retorna un valor explícito (null o un objeto vacío) para evitar que la función
+    // retorne undefined, lo que provoca el error en el controlador.
+    return null;
   });
 
   /**

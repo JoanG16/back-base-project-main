@@ -16,157 +16,156 @@ let _userModel = null;
 
 // Función auxiliar unificada para hashear contraseñas.
 const hashPassword = async (password) => {
-  try {
-    const salt = await bcrypt.genSalt(10);
-    return await bcrypt.hash(password, salt);
-  } catch (error) {
-    throw new Error('Error al hashear la contraseña.');
-  }
+  try {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
+  } catch (error) {
+    throw new Error('Error al hashear la contraseña.');
+  }
 };
 
 // Función auxiliar para verificar si una cadena es un hash de bcrypt
 const isBcryptHash = (str) => {
-  return /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(str);
+  return /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(str);
 };
 
 module.exports = class AuthService {
-  constructor({ UserModel }) {
-    _userModel = UserModel;
-  }
+  constructor({ UserModel }) {
+    _userModel = UserModel;
+  }
 
-  /**
-   * Endpoint para registrar un nuevo usuario.
-   */
-  registerUser = catchServiceAsync(async ({ username, password, role }) => {
-    // La encriptación se maneja en los hooks del modelo, pero este paso es una buena práctica
-    const hashedPassword = await hashPassword(password);
-    const result = await _userModel.create({
-      username,
-      password: hashedPassword,
-      role,
-    });
-    return { data: result };
-  });
+  /**
+   * Endpoint para registrar un nuevo usuario.
+   */
+  registerUser = catchServiceAsync(async ({ username, password, role }) => {
+    // La encriptación se maneja en los hooks del modelo, pero este paso es una buena práctica
+    const hashedPassword = await hashPassword(password);
+    const result = await _userModel.create({
+      username,
+      password: hashedPassword,
+      role,
+    });
+    return { data: result };
+  });
 
-  /**
-   * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
-   */
-  loginUser = catchServiceAsync(async (username, password) => {
-    // 1. Buscar al usuario por nombre de usuario
-    const user = await _userModel.findOne({ where: { username } });
+  /**
+   * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
+   * CORREGIDO: Se unifica la validación para evitar ataques de enumeración de usuarios.
+   */
+  loginUser = catchServiceAsync(async (username, password) => {
+    // Buscar al usuario por nombre de usuario
+    const user = await _userModel.findOne({ where: { username } });
 
-    if (!user) {
-      throw new Error('Error de autenticación');
-    }
+    // Si el usuario no existe o la contraseña no coincide, lanzamos un único error genérico.
+    // Esto es una buena práctica de seguridad.
+    let passwordMatch = false;
+    if (user) {
+      // Limpia la contraseña de entrada de espacios en blanco
+      const cleanPassword = password.trim();
+     
+      // 2. Verificar si el usuario existe y si la contraseña es correcta
+      if (user.password && isBcryptHash(user.password)) {
+        passwordMatch = await bcrypt.compare(cleanPassword, user.password);
+      } else if (user.password) {
+        // Caso de retrocompatibilidad: si la contraseña no está hasheada
+        // Se compara en texto plano y se actualiza a un hash para el futuro
+        passwordMatch = cleanPassword === user.password;
+        if (passwordMatch) {
+          const hashedPassword = await hashPassword(cleanPassword);
+          await user.update({ password: hashedPassword });
+        }
+      }
+    }
 
-    // Limpia la contraseña de entrada de espacios en blanco
-    const cleanPassword = password.trim();
+    if (!passwordMatch) {
+      throw new Error('Error de autenticación');
+    }
 
-    let passwordMatch = false;
+    // Generar y firmar un token JWT
+    const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
 
-    // 2. Verificar si el usuario existe y si la contraseña es correcta
-    if (user.password && isBcryptHash(user.password)) {
-      passwordMatch = await bcrypt.compare(cleanPassword, user.password);
-    } else if (user.password) {
-      // Caso de retrocompatibilidad: si la contraseña no está hasheada
-      // Se compara en texto plano y se actualiza a un hash para el futuro
-      passwordMatch = cleanPassword === user.password;
-      if (passwordMatch) {
-        const hashedPassword = await hashPassword(cleanPassword);
-        await user.update({ password: hashedPassword });
-      }
-    }
+    // Devolver la información del usuario y el token
+    const userWithoutPassword = {
+      id_user: user.id_user,
+      username: user.username,
+      role: user.role,
+      id_local: user.id_local,
+    };
 
-    if (!passwordMatch) {
-      throw new Error('Error de autenticación');
-    }
+    return {
+      data: {
+        token,
+        user: userWithoutPassword,
+      },
+    };
+  });
 
-    // 3. Generar y firmar un token JWT
-    const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+  /**
+   * Inicia el proceso de recuperación de contraseña.
+   */
+  forgotPassword = catchServiceAsync(async (email) => {
+    const user = await _userModel.findOne({ where: { email } });
+    if (!user) return;
 
-    // 4. Devolver la información del usuario y el token
-    const userWithoutPassword = {
-      id_user: user.id_user,
-      username: user.username,
-      role: user.role,
-      id_local: user.id_local,
-    };
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 3600000);
 
-    return {
-      data: {
-        token,
-        user: userWithoutPassword,
-      },
-    };
-  });
+    await user.update({
+      reset_password_token: resetToken,
+      reset_password_expires: resetExpires,
+    });
 
-  /**
-   * Inicia el proceso de recuperación de contraseña.
-   */
-  forgotPassword = catchServiceAsync(async (email) => {
-    const user = await _userModel.findOne({ where: { email } });
-    if (!user) return;
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      },
+    });
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000);
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: user.email,
+      subject: 'Recuperación de contraseña',
+      html: `
+        <h2>Recuperación de Contraseña</h2>
+        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
+        <p>Este enlace expirará en 1 hora.</p>
+        <p>Si no solicitaste esto, ignora este correo.</p>
+      `,
+    };
 
-    await user.update({
-      reset_password_token: resetToken,
-      reset_password_expires: resetExpires,
-    });
+    await transporter.sendMail(mailOptions);
+  });
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-    });
+  /**
+   * Restablece la contraseña del usuario.
+   */
+  resetPassword = catchServiceAsync(async (token, newPassword) => {
+    if (!newPassword || typeof newPassword !== 'string') {
+      throw new Error('La contraseña no es válida o faltante.');
+    }
 
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: user.email,
-      subject: 'Recuperación de contraseña',
-      html: `
-        <h2>Recuperación de Contraseña</h2>
-        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
-        <p>Este enlace expirará en 1 hora.</p>
-        <p>Si no solicitaste esto, ignora este correo.</p>
-      `,
-    };
+    const user = await _userModel.findOne({
+      where: {
+        reset_password_token: token,
+        reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
+      },
+    });
 
-    await transporter.sendMail(mailOptions);
-  });
+    if (!user) {
+      throw new Error('Token inválido o expirado.');
+    }
 
-  /**
-   * Restablece la contraseña del usuario.
-   */
-  resetPassword = catchServiceAsync(async (token, newPassword) => {
-    if (!newPassword || typeof newPassword !== 'string') {
-      throw new Error('La contraseña no es válida o faltante.');
-    }
+    const hashedPassword = await hashPassword(newPassword);
 
-    const user = await _userModel.findOne({
-      where: {
-        reset_password_token: token,
-        reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
-      },
-    });
-
-    if (!user) {
-      throw new Error('Token inválido o expirado.');
-    }
-
-    const hashedPassword = await hashPassword(newPassword);
-
-    await user.update({
-      password: hashedPassword,
-      reset_password_token: null,
-      reset_password_expires: null,
-    });
-  });
+    await user.update({
+      password: hashedPassword,
+      reset_password_token: null,
+      reset_password_expires: null,
+    });
+  });
 };
-

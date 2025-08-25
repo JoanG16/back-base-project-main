@@ -42,8 +42,8 @@ module.exports = class AuthService {
   /**
    * Login de usuario (email + password)
    */
-  login = catchServiceAsync(async (email, password) => {
-    const user = await _userModel.findOne({ where: { email } });
+  login = catchServiceAsync(async (username, password) => {
+    const user = await _userModel.findOne({ where: { username } });
     if (!user) {
       throw new Error('Credenciales inválidas');
     }

@@ -110,7 +110,9 @@ container
     ProductoController: asClass(ProductoController.bind(ProductoController)).singleton(),
     CategoriaController: asClass(CategoriaController.bind(CategoriaController)).singleton(),
     OfertaController: asClass(OfertaController.bind(OfertaController)).singleton(),
-    AuthController: asClass(AuthController.bind(AuthController)).singleton(),
+    AuthController: asClass(AuthController).inject(() => ({
+      authService: container.resolve('AuthService'),
+    })).singleton(),
     UserController: asClass(UserController.bind(UserController)).inject(() => ({ // <-- NUEVO
       UserService: container.resolve('UserService')
     })).singleton(),
@@ -122,7 +124,9 @@ container
     DownloadProductos: asFunction(DownloadProductos).singleton(),
     DownloadCategorias: asFunction(DownloadCategorias).singleton(),
     DownloadOfertas: asFunction(DownloadOfertas).singleton(),
-    DownloadAuth: asFunction(DownloadAuth).singleton(),
+    DownloadAuth: asFunction(DownloadAuth).inject(() => ({
+      AuthController: container.resolve('AuthController')
+    })).singleton(),
     DownloadUser: asFunction(DownloadUser).inject(() => ({ // <-- NUEVO
       UserController: container.resolve('UserController')
     })).singleton(),

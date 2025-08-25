@@ -1,4 +1,5 @@
 // src/services/auth.service.js
+
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -14,7 +15,7 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 
 let _userModel = null;
 
-// Función auxiliar unificada para hashear contraseñas.
+// Helper function to hash passwords.
 const hashPassword = async (password) => {
   try {
     const salt = await bcrypt.genSalt(10);
@@ -24,7 +25,7 @@ const hashPassword = async (password) => {
   }
 };
 
-// Función auxiliar para verificar si una cadena es un hash de bcrypt
+// Helper function to check if a string is a bcrypt hash.
 const isBcryptHash = (str) => {
   return /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(str);
 };
@@ -34,11 +35,7 @@ module.exports = class AuthService {
     _userModel = UserModel;
   }
 
-  /**
-   * Endpoint para registrar un nuevo usuario.
-   */
   registerUser = catchServiceAsync(async ({ username, password, role }) => {
-    // La encriptación se maneja en los hooks del modelo, pero este paso es una buena práctica
     const hashedPassword = await hashPassword(password);
     const result = await _userModel.create({
       username,
@@ -48,27 +45,16 @@ module.exports = class AuthService {
     return { data: result };
   });
 
-  /**
-   * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
-   * CORREGIDO: Se unifica la validación para evitar ataques de enumeración de usuarios.
-   */
   loginUser = catchServiceAsync(async (username, password) => {
-    // Buscar al usuario por nombre de usuario
     const user = await _userModel.findOne({ where: { username } });
 
-    // Si el usuario no existe o la contraseña no coincide, lanzamos un único error genérico.
-    // Esto es una buena práctica de seguridad.
     let passwordMatch = false;
     if (user) {
-      // Limpia la contraseña de entrada de espacios en blanco
       const cleanPassword = password.trim();
      
-      // 2. Verificar si el usuario existe y si la contraseña es correcta
       if (user.password && isBcryptHash(user.password)) {
         passwordMatch = await bcrypt.compare(cleanPassword, user.password);
       } else if (user.password) {
-        // Caso de retrocompatibilidad: si la contraseña no está hasheada
-        // Se compara en texto plano y se actualiza a un hash para el futuro
         passwordMatch = cleanPassword === user.password;
         if (passwordMatch) {
           const hashedPassword = await hashPassword(cleanPassword);
@@ -81,12 +67,10 @@ module.exports = class AuthService {
       throw new Error('Error de autenticación');
     }
 
-    // Generar y firmar un token JWT
     const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    // Devolver la información del usuario y el token
     const userWithoutPassword = {
       id_user: user.id_user,
       username: user.username,
@@ -102,9 +86,6 @@ module.exports = class AuthService {
     };
   });
 
-  /**
-   * Inicia el proceso de recuperación de contraseña.
-   */
   forgotPassword = catchServiceAsync(async (email) => {
     const user = await _userModel.findOne({ where: { email } });
     if (!user) return;
@@ -143,8 +124,10 @@ module.exports = class AuthService {
 
   /**
    * Restablece la contraseña del usuario.
+   * CORREGIDO: Extraemos 'newPassword' del cuerpo de la solicitud (req.body).
+   * La función ahora recibe un objeto como primer parámetro.
    */
-  resetPassword = catchServiceAsync(async (token, newPassword) => {
+  resetPassword = catchServiceAsync(async ({ token, newPassword }) => {
     if (!newPassword || typeof newPassword !== 'string') {
       throw new Error('La contraseña no es válida o faltante.');
     }

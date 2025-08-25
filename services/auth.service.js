@@ -103,4 +103,39 @@ module.exports = class AuthService {
       reset_password_expires: null,
     });
   });
+
+
+  loginUser = catchServiceAsync(async (username, password) => {
+    // 1. Buscar al usuario por nombre de usuario
+    const user = await _userModel.findOne({ where: { username } });
+
+    // 2. Verificar si el usuario existe y si la contraseña es correcta
+    // **AQUÍ ESTÁ LA LÍNEA CRÍTICA**
+    // Usamos bcrypt.compare para comparar la contraseña ingresada con la hasheada
+    const passwordMatch = user && await bcrypt.compare(password, user.password);
+
+    if (!passwordMatch) {
+      throw new Error('Error de autenticación'); // O 'Credenciales inválidas'
+    }
+
+    // 3. Si las credenciales son correctas, generar y firmar un token JWT
+    const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // 4. Devolver la información del usuario y el token
+    const userWithoutPassword = {
+      id_user: user.id_user,
+      username: user.username,
+      role: user.role,
+      id_local: user.id_local,
+    };
+
+    return {
+      data: {
+        token,
+        user: userWithoutPassword,
+      },
+    };
+  });
 };

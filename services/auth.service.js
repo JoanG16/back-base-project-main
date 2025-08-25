@@ -1,8 +1,8 @@
 // src/services/auth.service.js
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // Necesitas importar bcryptjs para hashear la nueva contraseña
-const crypto = require('crypto'); // Para generar el token de recuperación
-const nodemailer = require('nodemailer'); // Para enviar correos electrónicos
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const catchServiceAsync = require('../utils/catch-service-async');
 
@@ -19,10 +19,8 @@ module.exports = class AuthService {
     _userModel = UserModel;
   }
 
-  // ... (tus métodos registerUser y loginUser existentes)
-
   /**
-   * NUEVO: Inicia el proceso de recuperación de contraseña.
+   * Inicia el proceso de recuperación de contraseña.
    * 1. Busca el usuario por email.
    * 2. Genera un token y lo guarda en la BD.
    * 3. Envía un email con el enlace de recuperación.
@@ -73,12 +71,17 @@ module.exports = class AuthService {
   });
 
   /**
-   * NUEVO: Restablece la contraseña del usuario.
+   * Restablece la contraseña del usuario.
    * 1. Busca el usuario por el token y verifica que no haya expirado.
    * 2. Hashea la nueva contraseña y la guarda en la BD.
    * 3. Invalida el token para que no se pueda volver a usar.
    */
   resetPassword = catchServiceAsync(async (token, newPassword) => {
+    // CORRECCIÓN: Agregar validación para newPassword
+    if (!newPassword || typeof newPassword !== 'string') {
+      throw new Error('La contraseña no es válida o faltante.');
+    }
+
     // 1. Buscar el usuario por token y validar expiración
     const user = await _userModel.findOne({
       where: {
@@ -99,7 +102,5 @@ module.exports = class AuthService {
       reset_password_token: null, // 3. Invalida el token
       reset_password_expires: null,
     });
-
-    // También podrías enviar un correo de confirmación de cambio de contraseña aquí.
   });
 };

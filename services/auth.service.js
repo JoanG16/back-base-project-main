@@ -14,10 +14,16 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 
 let _userModel = null;
 
-// Función auxiliar para hashear contraseñas de forma segura
+// Función auxiliar unificada para hashear contraseñas.
+// Asegura que todas las contraseñas se hashean de la misma manera.
 const hashPassword = async (password) => {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
+  try {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(password, salt);
+  } catch (error) {
+    // Si hay un error, lo lanzamos para que se capture
+    throw new Error('Error al hashear la contraseña.');
+  }
 };
 
 module.exports = class AuthService {
@@ -27,9 +33,9 @@ module.exports = class AuthService {
 
   /**
    * Endpoint para registrar un nuevo usuario.
+   * Utiliza la función auxiliar para hashear la contraseña.
    */
   registerUser = catchServiceAsync(async ({ username, password, role }) => {
-    // Hasheamos la contraseña antes de guardarla
     const hashedPassword = await hashPassword(password);
     const result = await _userModel.create({
       username,
@@ -43,22 +49,20 @@ module.exports = class AuthService {
    * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
    */
   loginUser = catchServiceAsync(async (username, password) => {
-    // 1. Buscar al usuario por nombre de usuario
     const user = await _userModel.findOne({ where: { username } });
 
-    // 2. Verificar si el usuario existe y si la contraseña es correcta
+    // La comparación ahora es más robusta ya que sabemos que la contraseña se hasheó correctamente
+    // en ambos casos (registro y restablecimiento).
     const passwordMatch = user && await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       throw new Error('Error de autenticación');
     }
 
-    // 3. Generar y firmar un token JWT
     const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    // 4. Devolver la información del usuario y el token
     const userWithoutPassword = {
       id_user: user.id_user,
       username: user.username,
@@ -89,7 +93,6 @@ module.exports = class AuthService {
       reset_password_expires: resetExpires,
     });
 
-    // ... (rest of the nodemailer code) ...
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -116,6 +119,7 @@ module.exports = class AuthService {
 
   /**
    * Restablece la contraseña del usuario.
+   * Utiliza la misma función auxiliar para hashear la nueva contraseña.
    */
   resetPassword = catchServiceAsync(async (token, newPassword) => {
     if (!newPassword || typeof newPassword !== 'string') {
@@ -133,7 +137,7 @@ module.exports = class AuthService {
       throw new Error('Token inválido o expirado.');
     }
 
-    // Hashear la nueva contraseña con la función auxiliar
+    // Hasheamos la nueva contraseña antes de guardarla.
     const hashedPassword = await hashPassword(newPassword);
 
     await user.update({

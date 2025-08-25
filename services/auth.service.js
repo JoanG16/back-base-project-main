@@ -15,15 +15,20 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 let _userModel = null;
 
 // Función auxiliar unificada para hashear contraseñas.
-// Asegura que todas las contraseñas se hashean de la misma manera.
 const hashPassword = async (password) => {
   try {
     const salt = await bcrypt.genSalt(10);
     return await bcrypt.hash(password, salt);
   } catch (error) {
-    // Si hay un error, lo lanzamos para que se capture
     throw new Error('Error al hashear la contraseña.');
   }
+};
+
+// Función auxiliar para verificar si una cadena es un hash de bcrypt
+const isBcryptHash = (str) => {
+  // Un hash de bcrypt típicamente comienza con '$2a$', '$2b$' o '$2y$', seguido de '$' y dos dígitos.
+  // Su longitud es de 60 caracteres.
+  return /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(str);
 };
 
 module.exports = class AuthService {
@@ -33,7 +38,6 @@ module.exports = class AuthService {
 
   /**
    * Endpoint para registrar un nuevo usuario.
-   * Utiliza la función auxiliar para hashear la contraseña.
    */
   registerUser = catchServiceAsync(async ({ username, password, role }) => {
     const hashedPassword = await hashPassword(password);
@@ -49,20 +53,40 @@ module.exports = class AuthService {
    * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
    */
   loginUser = catchServiceAsync(async (username, password) => {
+    // 1. Buscar al usuario por nombre de usuario
     const user = await _userModel.findOne({ where: { username } });
 
-    // La comparación ahora es más robusta ya que sabemos que la contraseña se hasheó correctamente
-    // en ambos casos (registro y restablecimiento).
-    const passwordMatch = user && await bcrypt.compare(password, user.password);
+    if (!user) {
+      throw new Error('Error de autenticación');
+    }
+
+    // Verificamos si la contraseña en la BD ya está hasheada
+    let passwordMatch = false;
+
+    if (isBcryptHash(user.password)) {
+      // Si el password en la BD está hasheado, lo comparamos con el password ingresado
+      passwordMatch = await bcrypt.compare(password, user.password);
+    } else {
+      // Si el password no está hasheado, lo comparamos en texto plano
+      // y luego lo hasheamos para el futuro
+      passwordMatch = password === user.password;
+      if (passwordMatch) {
+        // Hashea la contraseña y actualiza la BD para el futuro
+        const hashedPassword = await hashPassword(password);
+        await user.update({ password: hashedPassword });
+      }
+    }
 
     if (!passwordMatch) {
       throw new Error('Error de autenticación');
     }
 
+    // 3. Generar y firmar un token JWT
     const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
 
+    // 4. Devolver la información del usuario y el token
     const userWithoutPassword = {
       id_user: user.id_user,
       username: user.username,
@@ -119,7 +143,6 @@ module.exports = class AuthService {
 
   /**
    * Restablece la contraseña del usuario.
-   * Utiliza la misma función auxiliar para hashear la nueva contraseña.
    */
   resetPassword = catchServiceAsync(async (token, newPassword) => {
     if (!newPassword || typeof newPassword !== 'string') {
@@ -137,7 +160,6 @@ module.exports = class AuthService {
       throw new Error('Token inválido o expirado.');
     }
 
-    // Hasheamos la nueva contraseña antes de guardarla.
     const hashedPassword = await hashPassword(newPassword);
 
     await user.update({

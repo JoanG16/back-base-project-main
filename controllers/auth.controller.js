@@ -1,7 +1,7 @@
 // src/controllers/auth.controller.js
 
 const httpStatus = require('http-status');
-const catchAsync = require('../utils/catch-controller-async'); // Usar catch-controller-async.js
+const catchAsync = require('../utils/catch-controller-async');
 
 module.exports = class AuthController {
   constructor(authService) {
@@ -25,6 +25,7 @@ module.exports = class AuthController {
   // Manejador para solicitar el token de reseteo
   forgotPassword = catchAsync(async (req, res) => {
     const { email } = req.body;
+    // La llamada al servicio es correcta, solo necesita el email
     await this.authService.forgotPassword(email);
     res.status(httpStatus.OK).json({ message: 'Si el correo existe, se ha enviado un enlace para restablecer la contraseña.' });
   });
@@ -34,7 +35,8 @@ module.exports = class AuthController {
     const { token } = req.params;
     const { newPassword } = req.body;
 
-    await this.authService.resetPassword({ token, newPassword });
+    // Llamada al servicio con el token y la nueva contraseña
+    await this.authService.resetPassword(token, newPassword);
 
     res.status(httpStatus.OK).json({ message: 'Contraseña restablecida correctamente.' });
   });

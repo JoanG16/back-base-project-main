@@ -1,10 +1,10 @@
-// src/models/user.models.js
 
+// src/models/user.models.js
 const { DataTypes } = require('sequelize');
 const { postgresConnection } = require('../startup/database');
 const bcrypt = require('bcryptjs');
 const LocalModel = require('./locales.models');
-const crypto = require('crypto'); // Nuevo: Módulo de Node.js para generar tokens
+const crypto = require('crypto');
 
 const UserModel = postgresConnection.define('User', {
   id_user: {
@@ -17,10 +17,10 @@ const UserModel = postgresConnection.define('User', {
     allowNull: false,
     unique: true,
   },
-  email: { // Nuevo: Campo para el correo electrónico
+  email: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    unique: true, // Importante: Asegura que no haya dos cuentas con el mismo email
+    unique: true,
   },
   password: {
     type: DataTypes.STRING(255),
@@ -43,7 +43,6 @@ const UserModel = postgresConnection.define('User', {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
-  // Nuevos campos para la recuperación de contraseña
   reset_password_token: {
     type: DataTypes.STRING(255),
     allowNull: true,

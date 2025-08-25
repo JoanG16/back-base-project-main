@@ -1,7 +1,8 @@
+
 // src/services/user.service.js
-const catchServiceAsync = require('../utils/catch-service-async');
 const BaseService = require('./base.service');
-const crypto = require('crypto'); // Para generar el token de recuperación
+const catchServiceAsync = require('../utils/catch-service-async');
+const crypto = require('crypto');
 
 let _user = null;
 
@@ -12,9 +13,6 @@ module.exports = class UserService extends BaseService {
     this.LocalModel = LocalModel;
   }
 
-  /**
-   * Obtiene todos los usuarios, incluyendo su local.
-   */
   getAllUsers = catchServiceAsync(async () => {
     const result = await _user.findAll({
       include: [{
@@ -26,9 +24,6 @@ module.exports = class UserService extends BaseService {
     return { data: result };
   });
 
-  /**
-   * Obtiene un usuario por su ID, incluyendo su local.
-   */
   getOneUser = catchServiceAsync(async (id) => {
     const result = await _user.findByPk(id, {
       include: [{
@@ -43,11 +38,7 @@ module.exports = class UserService extends BaseService {
     return { data: result };
   });
 
-  /**
-   * Crea un nuevo usuario. Ahora también requiere el campo 'email'.
-   */
   createUser = catchServiceAsync(async (body) => {
-    // Validar que el email no esté vacío y sea único
     if (!body.email) {
       throw new Error('El correo electrónico es requerido');
     }
@@ -61,9 +52,6 @@ module.exports = class UserService extends BaseService {
     return { data: result };
   });
 
-  /**
-   * Actualiza un usuario existente.
-   */
   updateUser = catchServiceAsync(async (id, body) => {
     const user = await _user.findByPk(id);
     if (!user) {
@@ -73,9 +61,6 @@ module.exports = class UserService extends BaseService {
     return { data: user };
   });
 
-  /**
-   * Elimina un usuario por su ID.
-   */
   deleteUser = catchServiceAsync(async (id) => {
     const user = await _user.findByPk(id);
     if (!user) {
@@ -85,14 +70,9 @@ module.exports = class UserService extends BaseService {
     return { data: user };
   });
 
-  /**
-   * NUEVO: Busca un usuario por su nombre de usuario o correo electrónico.
-   * Este método es crucial para el flujo de recuperación de contraseña.
-   */
   findUserByUsernameOrEmail = catchServiceAsync(async (identifier) => {
     const user = await _user.findOne({
       where: {
-        // Busca por username o email
         [require('sequelize').Op.or]: [
           { username: identifier },
           { email: identifier }
@@ -102,12 +82,9 @@ module.exports = class UserService extends BaseService {
     return { data: user };
   });
 
-  /**
-   * NUEVO: Genera y guarda un token de recuperación para el usuario.
-   */
   generateResetToken = catchServiceAsync(async (user) => {
     const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 3600000); // Token válido por 1 hora
+    const expires = new Date(Date.now() + 3600000);
 
     await user.update({
       reset_password_token: token,

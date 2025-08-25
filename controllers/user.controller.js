@@ -1,3 +1,4 @@
+
 // src/controllers/user.controller.js
 const catchControllerAsync = require('../utils/catch-controller-async');
 const { appResponse } = require('../utils/app-response');
@@ -22,13 +23,8 @@ module.exports = class UserController extends BaseController {
     return appResponse(res, result);
   });
 
-  /**
-   * Crea un nuevo usuario. Ahora el cuerpo de la solicitud puede incluir 'email'.
-   */
   createUser = catchControllerAsync(async (req, res) => {
     const body = req.body;
-    // Log para depuración, es buena práctica revisarlo en desarrollo.
-    console.log('BODY RECIBIDO para crear usuario:', body);
     const result = await _userService.createUser(body);
     return appResponse(res, result);
   });

@@ -1,10 +1,10 @@
+
 // src/middlewares/auth.middleware.js
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_dev'; // Debe coincidir con la clave del servicio
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey_dev';
 
 module.exports = (req, res, next) => {
-  // 1. Obtener el token del encabezado de autorización
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -15,16 +15,12 @@ module.exports = (req, res, next) => {
     });
   }
 
-  const token = authHeader.split(' ')[1]; // Obtener el token después de 'Bearer '
+  const token = authHeader.split(' ')[1];
 
   try {
-    // 2. Verificar el token
     const decoded = jwt.verify(token, JWT_SECRET);
-
-    // 3. Adjuntar la información del usuario decodificada al objeto de solicitud
-    // Esto permite que los controladores accedan a req.user (ej. req.user.id, req.user.role)
     req.user = decoded;
-    next(); // Continuar con la siguiente función de middleware o controlador
+    next();
   } catch (error) {
     console.error('Error al verificar el token:', error.message);
     if (error.name === 'TokenExpiredError') {

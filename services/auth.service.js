@@ -26,8 +26,6 @@ const hashPassword = async (password) => {
 
 // Función auxiliar para verificar si una cadena es un hash de bcrypt
 const isBcryptHash = (str) => {
-  // Un hash de bcrypt típicamente comienza con '$2a$', '$2b$' o '$2y$', seguido de '$' y dos dígitos.
-  // Su longitud es de 60 caracteres.
   return /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/.test(str);
 };
 
@@ -40,6 +38,7 @@ module.exports = class AuthService {
    * Endpoint para registrar un nuevo usuario.
    */
   registerUser = catchServiceAsync(async ({ username, password, role }) => {
+    // La encriptación se maneja en los hooks del modelo, pero este paso es una buena práctica
     const hashedPassword = await hashPassword(password);
     const result = await _userModel.create({
       username,
@@ -60,19 +59,20 @@ module.exports = class AuthService {
       throw new Error('Error de autenticación');
     }
 
-    // Verificamos si la contraseña en la BD ya está hasheada
+    // Limpia la contraseña de entrada de espacios en blanco
+    const cleanPassword = password.trim();
+
     let passwordMatch = false;
 
-    if (isBcryptHash(user.password)) {
-      // Si el password en la BD está hasheado, lo comparamos con el password ingresado
-      passwordMatch = await bcrypt.compare(password, user.password);
-    } else {
-      // Si el password no está hasheado, lo comparamos en texto plano
-      // y luego lo hasheamos para el futuro
-      passwordMatch = password === user.password;
+    // 2. Verificar si el usuario existe y si la contraseña es correcta
+    if (user.password && isBcryptHash(user.password)) {
+      passwordMatch = await bcrypt.compare(cleanPassword, user.password);
+    } else if (user.password) {
+      // Caso de retrocompatibilidad: si la contraseña no está hasheada
+      // Se compara en texto plano y se actualiza a un hash para el futuro
+      passwordMatch = cleanPassword === user.password;
       if (passwordMatch) {
-        // Hashea la contraseña y actualiza la BD para el futuro
-        const hashedPassword = await hashPassword(password);
+        const hashedPassword = await hashPassword(cleanPassword);
         await user.update({ password: hashedPassword });
       }
     }
@@ -169,3 +169,4 @@ module.exports = class AuthService {
     });
   });
 };
+

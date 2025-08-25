@@ -1,5 +1,5 @@
-// src/controllers/auth.controller.js
 
+// src/controllers/auth.controller.js
 const { appResponse } = require('../utils/app-response');
 
 let _authService = null;
@@ -9,9 +9,6 @@ module.exports = class AuthController {
     _authService = AuthService;
   }
 
-  /**
-   * Endpoint para registrar un nuevo usuario.
-   */
   register = async (req, res, next) => {
     try {
       const { username, password, role } = req.body;
@@ -22,9 +19,6 @@ module.exports = class AuthController {
     }
   };
 
-  /**
-   * Endpoint para iniciar sesión.
-   */
   login = async (req, res, next) => {
     try {
       const { username, password } = req.body;
@@ -35,9 +29,6 @@ module.exports = class AuthController {
     }
   };
 
-  /**
-   * Inicia el flujo de recuperación de contraseña.
-   */
   forgotPassword = async (req, res, next) => {
     try {
       const { email } = req.body;
@@ -48,16 +39,11 @@ module.exports = class AuthController {
     }
   };
 
-  /**
-   * Completa el restablecimiento de la contraseña.
-   * Recibe el token de la URL y la nueva contraseña en el cuerpo de la solicitud.
-   */
   resetPassword = async (req, res, next) => {
     try {
       const { token } = req.params;
       const { newPassword } = req.body;
 
-      // Validación explícita
       if (!newPassword || typeof newPassword !== 'string') {
         return res.status(400).json({ message: 'La nueva contraseña no es válida.' });
       }

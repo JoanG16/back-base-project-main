@@ -8,7 +8,7 @@ let _config = null;
 let _server = null;
 
 // Directorio donde se construyeron los archivos de Angular
-const frontendPath = path.join(__dirname, '..', '..', 'dist');
+const frontendPath = path.join(__dirname, '..', '..', 'dist'); // O la ruta correcta de tu carpeta 'dist'
 
 module.exports = class Server {
   constructor({ config, router }) {
@@ -29,13 +29,13 @@ module.exports = class Server {
     // Sirviendo los archivos estáticos de la aplicación Angular
     _express.use(express.static(frontendPath));
 
+    // Rutas de la API (DEBEN IR ANTES DE LA RUTA COMODÍN)
+    _express.use(router);
+
     // Ruta comodín para que Angular Router maneje todas las rutas del frontend
     _express.get('*', (req, res) => {
       res.sendFile(path.join(frontendPath, 'index.html'));
     });
-
-    // Rutas de la API (DEBEN IR DESPUÉS DE LAS RUTAS ESTÁTICAS)
-    _express.use(router);
 
     _server = http.createServer(_express);
   }

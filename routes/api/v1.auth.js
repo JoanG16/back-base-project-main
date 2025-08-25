@@ -13,8 +13,9 @@ module.exports = function ({ AuthController }) {
   router.post('/login', catchAsync(AuthController.loginUser.bind(AuthController)));
 
   // Inicia el proceso de recuperación de contraseña
-router.post('/forgot-password', AuthController.forgotPassword);
-  router.post('/reset-password/:token', AuthController.resetPassword);
+router.post('/forgot-password', catchAsync(AuthController.forgotPassword.bind(AuthController)));
+router.post('/reset-password/:token', catchAsync(AuthController.resetPassword.bind(AuthController)));
+
 
   return router;
 };

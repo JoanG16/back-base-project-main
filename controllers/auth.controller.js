@@ -1,36 +1,63 @@
 // src/controllers/auth.controller.js
-const catchAsync = require('../utils/catch-controller-async');
-const {
-    forgotPasswordService,
-    resetPasswordService
-} = require('../services/auth.service');
 const AppError = require('../utils/app-error');
+const catchAsync = require('../utils/catch-controller-async');
 
 class AuthController {
-    forgotPassword = catchAsync(async (req, res, next) => {
-        const { email } = req.body;
-        const result = await forgotPasswordService(email);
-        if (result?.error) {
-            return next(new AppError(result.message, result.statusCode || 500));
-        }
-        res.status(result?.statusCode || 200).json({
-            status: 'success',
-            message: result?.message || 'Si existe el correo, se envió un link de recuperación'
-        });
-    });
+  constructor({ authService }) {
+    this.authService = authService;
+  }
 
-    resetPassword = catchAsync(async (req, res, next) => {
-        const { token } = req.params;
-        const { newPassword } = req.body; // 👈 ojo aquí, tu frontend manda "newPassword"
-        const result = await resetPasswordService(token, newPassword);
-        if (result?.error) {
-            return next(new AppError(result.message, result.statusCode || 500));
-        }
-        res.status(result?.statusCode || 200).json({
-            status: 'success',
-            message: result?.message || 'Contraseña restablecida correctamente'
-        });
+  registerUser = catchAsync(async (req, res, next) => {
+    const result = await this.authService.register(req.body);
+    if (result?.error) {
+      return next(new AppError(result.message, result.statusCode || 500));
+    }
+    res.status(201).json({
+      status: 'success',
+      message: result?.message || 'Usuario registrado correctamente',
+      data: result?.data,
     });
+  });
+
+  loginUser = catchAsync(async (req, res, next) => {
+    const { email, password } = req.body;
+    const result = await this.authService.login(email, password);
+    if (result?.error) {
+      return next(new AppError(result.message, result.statusCode || 401));
+    }
+    res.status(200).json({
+      status: 'success',
+      message: result?.message || 'Login correcto',
+      token: result?.token,
+      user: result?.user,
+    });
+  });
+
+  forgotPassword = catchAsync(async (req, res, next) => {
+    const { email } = req.body;
+    const result = await this.authService.forgotPassword(email);
+    if (result?.error) {
+      return next(new AppError(result.message, result.statusCode || 500));
+    }
+    res.status(result?.statusCode || 200).json({
+      status: 'success',
+      message:
+        result?.message || 'Si existe el correo, se envió un link de recuperación',
+    });
+  });
+
+  resetPassword = catchAsync(async (req, res, next) => {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+    const result = await this.authService.resetPassword(token, newPassword);
+    if (result?.error) {
+      return next(new AppError(result.message, result.statusCode || 500));
+    }
+    res.status(result?.statusCode || 200).json({
+      status: 'success',
+      message: result?.message || 'Contraseña restablecida correctamente',
+    });
+  });
 }
 
 module.exports = AuthController;

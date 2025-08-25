@@ -123,8 +123,10 @@ container
       ofertaService: container.resolve('OfertaService')
     })).singleton(),
     AuthController: asClass(AuthController).inject(() => ({
-      authService: container.resolve('AuthService')
-    })).singleton(),
+  authService: container.resolve('AuthService')
+})).singleton(),
+
+
     UserController: asClass(UserController).inject(() => ({
       userService: container.resolve('UserService')
     })).singleton(),

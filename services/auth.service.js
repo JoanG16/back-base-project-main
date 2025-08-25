@@ -151,28 +151,30 @@ module.exports = class AuthService {
   /**
    * Restablece la contraseña del usuario.
    */
-  resetPassword = catchServiceAsync(async (token, newPassword) => {
-    if (!newPassword || typeof newPassword !== 'string') {
-      throw new Error('La contraseña no es válida o faltante.');
-    }
+ resetPassword = catchServiceAsync(async (token, newPassword) => {
+  if (!newPassword || typeof newPassword !== 'string') {
+    throw new Error('La contraseña no es válida o faltante.');
+  }
 
-    const user = await _userModel.findOne({
-      where: {
-        reset_password_token: token,
-        reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
-      },
-    });
+  const user = await _userModel.findOne({
+    where: {
+      reset_password_token: token,
+      reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
+    },
+  });
 
-    if (!user) {
-      throw new Error('Token inválido o expirado.');
-    }
+  if (!user) {
+    throw new Error('Token inválido o expirado.');
+  }
 
-    const hashedPassword = await hashPassword(newPassword);
+  const hashedPassword = await hashPassword(newPassword);
 
-    await user.update({
-      password: hashedPassword,
-      reset_password_token: null,
-      reset_password_expires: null,
-    });
-  });
+  await user.update({
+    password: hashedPassword,
+    reset_password_token: null,
+    reset_password_expires: null,
+  });
+
+  return { message: 'Contraseña restablecida correctamente' };
+});
 };

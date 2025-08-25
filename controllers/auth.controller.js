@@ -7,54 +7,30 @@ const {
 const AppError = require('../utils/app-error');
 
 class AuthController {
-    // Solución para el error 'Invalid status code: undefined'
     forgotPassword = catchAsync(async (req, res, next) => {
-        const {
-            email
-        } = req.body;
+        const { email } = req.body;
         const result = await forgotPasswordService(email);
-        if (result.error) {
-            // Aseguramos que el código de estado sea un número válido.
+        if (result?.error) {
             return next(new AppError(result.message, result.statusCode || 500));
         }
-        // Aseguramos que el código de estado sea un número válido.
-        res.status(result.statusCode || 200).json({
+        res.status(result?.statusCode || 200).json({
             status: 'success',
-            message: result.message
+            message: result?.message || 'Si existe el correo, se envió un link de recuperación'
         });
     });
 
-    // Solución para el error 'Invalid status code: undefined'
     resetPassword = catchAsync(async (req, res, next) => {
-        const {
-            token
-        } = req.params;
-        const {
-            password,
-            passwordConfirm
-        } = req.body;
-        const result = await resetPasswordService(token, password, passwordConfirm);
-        if (result.error) {
-            // Aseguramos que el código de estado sea un número válido.
+        const { token } = req.params;
+        const { newPassword } = req.body; // 👈 ojo aquí, tu frontend manda "newPassword"
+        const result = await resetPasswordService(token, newPassword);
+        if (result?.error) {
             return next(new AppError(result.message, result.statusCode || 500));
         }
-        // Aseguramos que el código de estado sea un número válido.
-        res.status(result.statusCode || 200).json({
+        res.status(result?.statusCode || 200).json({
             status: 'success',
-            message: result.message
+            message: result?.message || 'Contraseña restablecida correctamente'
         });
     });
 }
 
-// --- Corrección para 'catch-controller-async.js' ---
-
-// Solución para el error 'next is not a function'
-// La función debe devolver una función que reciba (req, res, next).
-// De esta manera, el 'next' de Express se propaga correctamente.
-const catchAsync = (fn) => {
-    return (req, res, next) => {
-        fn(req, res, next).catch((err) => next(err));
-    };
-};
-
-module.exports = catchAsync;
+module.exports = AuthController;

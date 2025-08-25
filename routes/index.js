@@ -21,11 +21,18 @@ module.exports = function ({
 }) {
   const router = Router();
   const apiRouter = Router();
+  const cors = require('cors');
 
   // Middlewares globales para apiRouter
-  apiRouter
-    .use(require('cors')())
-    .use(require('morgan')('dev'))
+  apiRouter.use(cors({
+  origin: [
+    'https://angular-x1xv.onrender.com', // tu frontend en Render
+    'http://localhost:4200'              // para desarrollo local
+  ],
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+  credentials: true
+})).use(require('morgan')('dev'))
     .use(require('express').json())
     .use(require('express').urlencoded({ extended: true }));
 

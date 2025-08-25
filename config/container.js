@@ -22,7 +22,7 @@ const CategoriaService = require('../services/categorias.service');
 const OfertaService = require('../services/oferta.service');
 const AuthService = require('../services/auth.service');
 const CloudinaryService = require('../services/cloudinary.service');
-const UserService = require('../services/user.service'); // <-- NUEVO
+const UserService = require('../services/user.service');
 
 // Controladores
 const SocioController = require('../controllers/socio.controller');
@@ -32,7 +32,7 @@ const ProductoController = require('../controllers/productos.controller');
 const CategoriaController = require('../controllers/categorias.controller');
 const OfertaController = require('../controllers/oferta.controller');
 const AuthController = require('../controllers/auth.controller');
-const UserController = require('../controllers/user.controller'); // <-- NUEVO
+const UserController = require('../controllers/user.controller');
 
 // Rutas (routers de API v1)
 const DownloadSocios = require('../routes/api/v1.socio');
@@ -42,7 +42,7 @@ const DownloadProductos = require('../routes/api/v1.productos');
 const DownloadCategorias = require('../routes/api/v1.categorias');
 const DownloadOfertas = require('../routes/api/v1.oferta');
 const DownloadAuth = require('../routes/api/v1.auth');
-const DownloadUser = require('../routes/api/v1.user'); // <-- NUEVO
+const DownloadUser = require('../routes/api/v1.user');
 
 const config = {
   PORT: process.env.PORT || 3000,
@@ -64,15 +64,14 @@ container
       DownloadCategorias: container.resolve('DownloadCategorias'),
       DownloadOfertas: container.resolve('DownloadOfertas'),
       DownloadAuth: container.resolve('DownloadAuth'),
-      DownloadUser: container.resolve('DownloadUser'), // <-- NUEVO: Inyectar la ruta de usuario
-      // Inyectar controladores directamente para las rutas GET ALL
+      DownloadUser: container.resolve('DownloadUser'),
       SocioController: container.resolve('SocioController'),
       ContenedorController: container.resolve('ContenedorController'),
       LocalController: container.resolve('LocalController'),
       ProductoController: container.resolve('ProductoController'),
       CategoriaController: container.resolve('CategoriaController'),
       OfertaController: container.resolve('OfertaController'),
-      UserController: container.resolve('UserController'), // <-- NUEVO: Inyectar el controlador de usuario
+      UserController: container.resolve('UserController'),
     })).singleton(),
     Server: asClass(Server).singleton(),
     config: asValue(config),
@@ -98,23 +97,36 @@ container
     OfertaService: asClass(OfertaService).singleton(),
     AuthService: asClass(AuthService).inject(() => ({ UserModel: container.resolve('UserModel') })).singleton(),
     CloudinaryService: asClass(CloudinaryService).singleton(),
-    UserService: asClass(UserService).inject(() => ({ // <-- NUEVO
+    UserService: asClass(UserService).inject(() => ({
       UserModel: container.resolve('UserModel'),
       LocalModel: container.resolve('LocalModel')
     })).singleton(),
   })
   .register({
-    SocioController: asClass(SocioController.bind(SocioController)).singleton(),
-    ContenedorController: asClass(ContenedorController.bind(ContenedorController)).singleton(),
-    LocalController: asClass(LocalController.bind(LocalController)).singleton(),
-    ProductoController: asClass(ProductoController.bind(ProductoController)).singleton(),
-    CategoriaController: asClass(CategoriaController.bind(CategoriaController)).singleton(),
-    OfertaController: asClass(OfertaController.bind(OfertaController)).singleton(),
-    AuthController: asClass(AuthController).inject(() => ({
-      authService: container.resolve('AuthService'),
+    // Registros corregidos para que los controladores inyecten sus servicios
+    SocioController: asClass(SocioController).inject(() => ({
+      socioService: container.resolve('SocioService')
     })).singleton(),
-    UserController: asClass(UserController.bind(UserController)).inject(() => ({ // <-- NUEVO
-      UserService: container.resolve('UserService')
+    ContenedorController: asClass(ContenedorController).inject(() => ({
+      contenedorService: container.resolve('ContenedorService')
+    })).singleton(),
+    LocalController: asClass(LocalController).inject(() => ({
+      localService: container.resolve('LocalService')
+    })).singleton(),
+    ProductoController: asClass(ProductoController).inject(() => ({
+      productoService: container.resolve('ProductoService')
+    })).singleton(),
+    CategoriaController: asClass(CategoriaController).inject(() => ({
+      categoriaService: container.resolve('CategoriaService')
+    })).singleton(),
+    OfertaController: asClass(OfertaController).inject(() => ({
+      ofertaService: container.resolve('OfertaService')
+    })).singleton(),
+    AuthController: asClass(AuthController).inject(() => ({
+      authService: container.resolve('AuthService')
+    })).singleton(),
+    UserController: asClass(UserController).inject(() => ({
+      userService: container.resolve('UserService')
     })).singleton(),
   })
   .register({
@@ -127,7 +139,7 @@ container
     DownloadAuth: asFunction(DownloadAuth).inject(() => ({
       AuthController: container.resolve('AuthController')
     })).singleton(),
-    DownloadUser: asFunction(DownloadUser).inject(() => ({ // <-- NUEVO
+    DownloadUser: asFunction(DownloadUser).inject(() => ({
       UserController: container.resolve('UserController')
     })).singleton(),
   });

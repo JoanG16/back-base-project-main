@@ -2,22 +2,20 @@
 
 const { Router } = require('express');
 
-// La función `module.exports` recibe un objeto con la instancia del controlador.
 module.exports = function ({ AuthController }) {
-  const router = Router();
+  const router = Router();
 
-  // Ruta para registrar un usuario
-  // Ahora usamos la instancia del controlador para llamar al método.
-  router.post('/register', AuthController.registerUser);
+  // Ruta para registrar un usuario
+  router.post('/register', (req, res, next) => AuthController.registerUser(req, res, next));
 
-  // Ruta para iniciar sesión
-  router.post('/login', AuthController.loginUser);
+  // Ruta para iniciar sesión
+  router.post('/login', (req, res, next) => AuthController.loginUser(req, res, next));
 
-  // NUEVA RUTA: Inicia el proceso de recuperación de contraseña
-  router.post('/forgot-password', AuthController.forgotPassword);
+  // Inicia el proceso de recuperación de contraseña
+  router.post('/forgot-password', (req, res, next) => AuthController.forgotPassword(req, res, next));
 
-  // NUEVA RUTA: Restablece la contraseña usando el token
-  router.post('/reset-password/:token', AuthController.resetPassword);
+  // Restablece la contraseña usando el token
+  router.post('/reset-password/:token', (req, res, next) => AuthController.resetPassword(req, res, next));
 
-  return router;
+  return router;
 };

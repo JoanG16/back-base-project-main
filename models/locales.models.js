@@ -23,21 +23,33 @@ const LocalModel = postgresConnection.define('Local', {
     allowNull: false,
   },
   facebook: {
-    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
+    type: DataTypes.TEXT,
     allowNull: true,
   },
   instagram: {
-    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
+    type: DataTypes.TEXT,
     allowNull: true,
   },
   tiktok: {
-    type: DataTypes.TEXT, // <-- ¡CAMBIO A TEXT!
+    type: DataTypes.TEXT,
     allowNull: true,
   },
   telefono: {
     type: DataTypes.STRING(20),
     allowNull: true,
   },
+  // -- Nuevos campos para RUC y Correo --
+  ruc: {
+    type: DataTypes.STRING(13),
+    allowNull: false, // El RUC es un campo obligatorio
+    unique: true, // Debe ser único para evitar duplicados
+  },
+  correo: {
+    type: DataTypes.STRING(255),
+    allowNull: false, // El correo es un campo obligatorio
+    unique: true, // Debe ser único para evitar duplicados
+  },
+  // ------------------------------------
   id_contenedor: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -14,111 +14,46 @@ const EMAIL_PASS = process.env.EMAIL_PASS;
 
 let _userModel = null;
 
+// Función auxiliar para hashear contraseñas de forma segura
+const hashPassword = async (password) => {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+};
+
 module.exports = class AuthService {
   constructor({ UserModel }) {
     _userModel = UserModel;
   }
 
   /**
-   * Inicia el proceso de recuperación de contraseña.
-   * 1. Busca el usuario por email.
-   * 2. Genera un token y lo guarda en la BD.
-   * 3. Envía un email con el enlace de recuperación.
+   * Endpoint para registrar un nuevo usuario.
    */
-  forgotPassword = catchServiceAsync(async (email) => {
-    // 1. Buscar al usuario por email
-    const user = await _userModel.findOne({ where: { email } });
-
-    // Si el usuario no existe, no hacemos nada (por seguridad), pero respondemos como si sí.
-    if (!user) {
-      return;
-    }
-
-    // 2. Generar el token y la fecha de expiración
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 3600000); // 1 hora de validez
-
-    // 3. Guardar el token y la expiración en la base de datos
-    await user.update({
-      reset_password_token: resetToken,
-      reset_password_expires: resetExpires,
+  registerUser = catchServiceAsync(async ({ username, password, role }) => {
+    // Hasheamos la contraseña antes de guardarla
+    const hashedPassword = await hashPassword(password);
+    const result = await _userModel.create({
+      username,
+      password: hashedPassword,
+      role,
     });
-
-    // 4. Configurar Nodemailer para enviar el email
-    const transporter = nodemailer.createTransport({
-      service: 'gmail', // Puedes cambiarlo por otro proveedor (ej. SendGrid)
-      auth: {
-        user: EMAIL_USER, // Variable de entorno para el email
-        pass: EMAIL_PASS, // Variable de entorno para la contraseña
-      },
-    });
-
-    // 5. Enviar el correo electrónico con el enlace
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: user.email,
-      subject: 'Recuperación de contraseña',
-      html: `
-        <h2>Recuperación de Contraseña</h2>
-        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
-        <p>Este enlace expirará en 1 hora.</p>
-        <p>Si no solicitaste esto, ignora este correo.</p>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
+    return { data: result };
   });
 
   /**
-   * Restablece la contraseña del usuario.
-   * 1. Busca el usuario por el token y verifica que no haya expirado.
-   * 2. Hashea la nueva contraseña y la guarda en la BD.
-   * 3. Invalida el token para que no se pueda volver a usar.
+   * Intenta iniciar sesión y devuelve los datos del usuario si las credenciales son correctas.
    */
-  resetPassword = catchServiceAsync(async (token, newPassword) => {
-    // CORRECCIÓN: Agregar validación para newPassword
-    if (!newPassword || typeof newPassword !== 'string') {
-      throw new Error('La contraseña no es válida o faltante.');
-    }
-
-    // 1. Buscar el usuario por token y validar expiración
-    const user = await _userModel.findOne({
-      where: {
-        reset_password_token: token,
-        reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
-      },
-    });
-
-    if (!user) {
-      throw new Error('Token inválido o expirado.');
-    }
-
-    // 2. Hashear la nueva contraseña y actualizar el usuario
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-    await user.update({
-      password: hashedPassword,
-      reset_password_token: null, // 3. Invalida el token
-      reset_password_expires: null,
-    });
-  });
-
-
   loginUser = catchServiceAsync(async (username, password) => {
     // 1. Buscar al usuario por nombre de usuario
     const user = await _userModel.findOne({ where: { username } });
 
     // 2. Verificar si el usuario existe y si la contraseña es correcta
-    // **AQUÍ ESTÁ LA LÍNEA CRÍTICA**
-    // Usamos bcrypt.compare para comparar la contraseña ingresada con la hasheada
     const passwordMatch = user && await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
-      throw new Error('Error de autenticación'); // O 'Credenciales inválidas'
+      throw new Error('Error de autenticación');
     }
 
-    // 3. Si las credenciales son correctas, generar y firmar un token JWT
+    // 3. Generar y firmar un token JWT
     const token = jwt.sign({ id: user.id_user, role: user.role }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
@@ -137,5 +72,74 @@ module.exports = class AuthService {
         user: userWithoutPassword,
       },
     };
+  });
+
+  /**
+   * Inicia el proceso de recuperación de contraseña.
+   */
+  forgotPassword = catchServiceAsync(async (email) => {
+    const user = await _userModel.findOne({ where: { email } });
+    if (!user) return;
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 3600000);
+
+    await user.update({
+      reset_password_token: resetToken,
+      reset_password_expires: resetExpires,
+    });
+
+    // ... (rest of the nodemailer code) ...
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: user.email,
+      subject: 'Recuperación de contraseña',
+      html: `
+        <h2>Recuperación de Contraseña</h2>
+        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
+        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
+        <p>Este enlace expirará en 1 hora.</p>
+        <p>Si no solicitaste esto, ignora este correo.</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+  });
+
+  /**
+   * Restablece la contraseña del usuario.
+   */
+  resetPassword = catchServiceAsync(async (token, newPassword) => {
+    if (!newPassword || typeof newPassword !== 'string') {
+      throw new Error('La contraseña no es válida o faltante.');
+    }
+
+    const user = await _userModel.findOne({
+      where: {
+        reset_password_token: token,
+        reset_password_expires: { [require('sequelize').Op.gt]: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new Error('Token inválido o expirado.');
+    }
+
+    // Hashear la nueva contraseña con la función auxiliar
+    const hashedPassword = await hashPassword(newPassword);
+
+    await user.update({
+      password: hashedPassword,
+      reset_password_token: null,
+      reset_password_expires: null,
+    });
   });
 };

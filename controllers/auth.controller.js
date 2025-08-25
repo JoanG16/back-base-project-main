@@ -1,57 +1,44 @@
-
 // src/controllers/auth.controller.js
-const { appResponse } = require('../utils/app-response');
 
-let _authService = null;
+const httpStatus = require('http-status');
+const catchAsync = require('../utils/catch-async');
+const authService = require('../services/auth.service');
 
-module.exports = class AuthController {
-  constructor({ AuthService }) {
-    _authService = AuthService;
-  }
+const authController = {
+  // Manejador de registro de usuario
+  registerUser: catchAsync(async (req, res) => {
+    const { username, password, role } = req.body;
+    const result = await authService.registerUser({ username, password, role });
+    res.status(httpStatus.CREATED).json(result);
+  }),
 
-  register = async (req, res, next) => {
-    try {
-      const { username, password, role } = req.body;
-      const result = await _authService.registerUser({ username, password, role });
-      return appResponse(res, { data: result.data, statusCode: 201, message: 'Usuario registrado exitosamente.' });
-    } catch (err) {
-      next(err);
-    }
-  };
+  // Manejador de login de usuario
+  loginUser: catchAsync(async (req, res) => {
+    const { username, password } = req.body;
+    const result = await authService.loginUser(username, password);
+    res.status(httpStatus.OK).json(result);
+  }),
 
-  login = async (req, res, next) => {
-    try {
-      const { username, password } = req.body;
-      const result = await _authService.loginUser(username, password);
-      return appResponse(res, { data: result.data, message: 'Inicio de sesión exitoso.' });
-    } catch (err) {
-      next(err);
-    }
-  };
+  // Manejador para solicitar el token de reseteo
+  forgotPassword: catchAsync(async (req, res) => {
+    const { email } = req.body;
+    await authService.forgotPassword(email);
+    res.status(httpStatus.OK).json({ message: 'Si el correo existe, se ha enviado un enlace para restablecer la contraseña.' });
+  }),
 
-  forgotPassword = async (req, res, next) => {
-    try {
-      const { email } = req.body;
-      await _authService.forgotPassword(email);
-      return appResponse(res, { message: 'Si el email está registrado, se le enviará un enlace para restablecer su contraseña.' });
-    } catch (err) {
-      next(err);
-    }
-  };
+  // Manejador para el reseteo de la contraseña
+  // CORREGIDO: Se extrae el token de los parámetros y la nueva contraseña del cuerpo.
+  resetPassword: catchAsync(async (req, res) => {
+    // Extraer el token de los parámetros de la URL
+    const { token } = req.params;
+    // Extraer la nueva contraseña del cuerpo de la solicitud
+    const { newPassword } = req.body;
 
-  resetPassword = async (req, res, next) => {
-    try {
-      const { token } = req.params;
-      const { newPassword } = req.body;
+    // Llamar al servicio con ambos valores
+    await authService.resetPassword({ token, newPassword });
 
-      if (!newPassword || typeof newPassword !== 'string') {
-        return res.status(400).json({ message: 'La nueva contraseña no es válida.' });
-      }
-
-      await _authService.resetPassword(token, newPassword);
-      return appResponse(res, { message: 'Su contraseña ha sido restablecida exitosamente.' });
-    } catch (err) {
-      next(err);
-    }
-  };
+    res.status(httpStatus.OK).json({ message: 'Contraseña restablecida correctamente.' });
+  }),
 };
+
+module.exports = authController;

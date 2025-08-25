@@ -1,7 +1,7 @@
 // src/controllers/auth.controller.js
 
 const httpStatus = require('http-status');
-const catchAsync = require('../utils/catch-async');
+const catchAsync = require('../utils/catch-controller-async');
 const authService = require('../services/auth.service');
 
 const authController = {

@@ -63,7 +63,7 @@ module.exports = class AuthService {
       html: `
         <h2>Recuperación de Contraseña</h2>
         <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace para continuar:</p>
-        <a href="${FRONTEND_URL}/reset-password/token/${resetToken}">Restablecer Contraseña</a>
+        <a href="${FRONTEND_URL}/browser/reset-password/token/${resetToken}">Restablecer Contraseña</a>
         <p>Este enlace expirará en 1 hora.</p>
         <p>Si no solicitaste esto, ignora este correo.</p>
       `,

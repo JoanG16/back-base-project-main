@@ -1,51 +1,60 @@
 // src/controllers/auth.controller.js
-
-const httpStatus = require('http-status');
 const catchAsync = require('../utils/catch-controller-async');
+const {
+    forgotPasswordService,
+    resetPasswordService
+} = require('../services/auth.service');
+const AppError = require('../utils/app-error');
 
-module.exports = class AuthController {
-  constructor({ authService }) {
-    this.authService = authService;
-  }
+class AuthController {
+    // Solución para el error 'Invalid status code: undefined'
+    forgotPassword = catchAsync(async (req, res, next) => {
+        const {
+            email
+        } = req.body;
+        const result = await forgotPasswordService(email);
+        if (result.error) {
+            // Aseguramos que el código de estado sea un número válido.
+            return next(new AppError(result.message, result.statusCode || 500));
+        }
+        // Aseguramos que el código de estado sea un número válido.
+        res.status(result.statusCode || 200).json({
+            status: 'success',
+            message: result.message
+        });
+    });
 
-  async registerUser(req, res) {
-    const { username, password, role } = req.body;
-    const result = await this.authService.registerUser({ username, password, role });
-    res.status(httpStatus.CREATED).json(result);
-  }
+    // Solución para el error 'Invalid status code: undefined'
+    resetPassword = catchAsync(async (req, res, next) => {
+        const {
+            token
+        } = req.params;
+        const {
+            password,
+            passwordConfirm
+        } = req.body;
+        const result = await resetPasswordService(token, password, passwordConfirm);
+        if (result.error) {
+            // Aseguramos que el código de estado sea un número válido.
+            return next(new AppError(result.message, result.statusCode || 500));
+        }
+        // Aseguramos que el código de estado sea un número válido.
+        res.status(result.statusCode || 200).json({
+            status: 'success',
+            message: result.message
+        });
+    });
+}
 
-  async loginUser(req, res) {
-    const { username, password } = req.body;
-    const result = await this.authService.loginUser(username, password);
-    res.status(httpStatus.OK).json(result);
-  }
+// --- Corrección para 'catch-controller-async.js' ---
 
-  async forgotPassword(req, res) {
-    const { email } = req.body;
-    try {
-      // La llamada al servicio es correcta, solo necesita el email
-      await this.authService.forgotPassword(email);
-      // Mensaje genérico para no revelar si el correo existe
-      res.status(httpStatus.OK).json({ message: 'Si el correo existe, se ha enviado un enlace para restablecer la contraseña.' });
-    } catch (error) {
-      // Si ocurre un error, el servicio podría haber lanzado una excepción
-      console.error('Error en forgotPassword del controlador:', error.message);
-      res.status(httpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Ocurrió un error en el servidor. Intenta de nuevo más tarde.' });
-    }
-  }
-
-  async resetPassword(req, res) {
-    const { token } = req.params;
-    const { newPassword } = req.body;
-
-    try {
-      // Llamada al servicio con el token y la nueva contraseña
-      await this.authService.resetPassword(token, newPassword);
-      res.status(httpStatus.OK).json({ message: 'Contraseña restablecida correctamente.' });
-    } catch (error) {
-      console.error('Error en resetPassword del controlador:', error.message);
-      // Envía un error 400 (Bad Request) para indicar un token inválido o expirado
-      res.status(httpStatus.BAD_REQUEST).json({ message: 'Error al actualizar la contraseña. El enlace pudo haber expirado.' });
-    }
-  }
+// Solución para el error 'next is not a function'
+// La función debe devolver una función que reciba (req, res, next).
+// De esta manera, el 'next' de Express se propaga correctamente.
+const catchAsync = (fn) => {
+    return (req, res, next) => {
+        fn(req, res, next).catch((err) => next(err));
+    };
 };
+
+module.exports = catchAsync;

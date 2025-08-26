@@ -17,6 +17,24 @@ module.exports = class LocalService extends BaseService {
     _cloudinaryService = CloudinaryService;
   }
 
+ getAllLocalesWithStatus = catchServiceAsync(async () => {
+    const result = await _local.findAll({
+      include: [
+        {
+          model: ProductoModel,
+          as: 'productos',
+          through: { attributes: [] },
+          include: [{
+            model: CategoriaModel,
+            as: 'categoria',
+            attributes: ['id_categoria', 'nombre_categoria']
+          }]
+        },
+      ]
+    });
+    return { data: result };
+  });
+
   // Método para obtener todos los locales (solo los activos por defecto)
   getAllLocales = catchServiceAsync(async () => {
     const result = await _local.findAll({

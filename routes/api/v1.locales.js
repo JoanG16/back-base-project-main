@@ -9,7 +9,7 @@ module.exports = function ({ LocalController }) {
   router.get('/get-all', LocalController.getAllLocales);
 
   router.get('/reporte/excel', LocalController.downloadLocalesExcel);
-
+router.get('/get-all-with-status', LocalController.getAllLocales);
   // --- CAMBIO: La ruta de "borrar" ahora desactiva ---
   router.delete('/delete/:id', LocalController.deleteLocal);
 
@@ -21,6 +21,6 @@ module.exports = function ({ LocalController }) {
   router.post('/create', LocalController.createLocal);
   router.put('/update/:id', LocalController.updateLocal);
   router.post('/:id/productos', LocalController.createProductoForLocal);
-
+ 
   return router;
 };

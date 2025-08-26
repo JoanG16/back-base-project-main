@@ -19,9 +19,14 @@ class AuthController {
     });
   });
 
+  
   loginUser = catchAsync(async (req, res, next) => {
-    const { email, password } = req.body;
-    const result = await this.authService.login(email, password);
+    // ➡️ CAMBIO AQUÍ: extrae 'username' en lugar de 'email'
+    const { username, password } = req.body;
+    
+    // ➡️ También debes cambiar la llamada al servicio para pasar 'username'
+    //    Esto asume que ya has modificado el servicio para aceptar username
+    const result = await this.authService.login(username, password); 
     if (result?.error) {
       return next(new AppError(result.message, result.statusCode || 401));
     }

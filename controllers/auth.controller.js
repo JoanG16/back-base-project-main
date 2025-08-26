@@ -8,60 +8,65 @@ class AuthController {
   }
 
   registerUser = catchAsync(async (req, res, next) => {
-    const result = await this.authService.register(req.body);
-    if (result?.error) {
-      return next(new AppError(result.message, result.statusCode || 500));
+    const { username, email, password, role } = req.body;
+    try {
+      const result = await this.authService.register({ username, email, password, role });
+      res.status(201).json({
+        status: 'success',
+        message: 'Usuario registrado correctamente',
+        data: result.data,
+      });
+    } catch (err) {
+      // Envía el error con un formato consistente
+      return next(new AppError(err.message, 400));
     }
-    res.status(201).json({
-      status: 'success',
-      message: result?.message || 'Usuario registrado correctamente',
-      data: result?.data,
-    });
   });
 
-  
   loginUser = catchAsync(async (req, res, next) => {
-    // ➡️ CAMBIO AQUÍ: extrae 'username' en lugar de 'email'
     const { username, password } = req.body;
-    
-    // ➡️ También debes cambiar la llamada al servicio para pasar 'username'
-    //    Esto asume que ya has modificado el servicio para aceptar username
-    const result = await this.authService.login(username, password); 
-    if (result?.error) {
-      return next(new AppError(result.message, result.statusCode || 401));
+    try {
+      const result = await this.authService.login(username, password);
+      // La respuesta exitosa debe tener el formato que el frontend espera
+      // { data: { token, user } }
+      res.status(200).json({
+        status: 'success',
+        message: 'Login correcto',
+        data: {
+          token: result.token,
+          user: result.user
+        }
+      });
+    } catch (err) {
+      // Envía el error con un formato consistente que incluye un mensaje
+      return next(new AppError(err.message, 401));
     }
-    res.status(200).json({
-      status: 'success',
-      message: result?.message || 'Login correcto',
-      token: result?.token,
-      user: result?.user,
-    });
   });
 
   forgotPassword = catchAsync(async (req, res, next) => {
     const { email } = req.body;
-    const result = await this.authService.forgotPassword(email);
-    if (result?.error) {
-      return next(new AppError(result.message, result.statusCode || 500));
+    try {
+      const result = await this.authService.forgotPassword(email);
+      res.status(200).json({
+        status: 'success',
+        message: result.message,
+      });
+    } catch (err) {
+      return next(new AppError(err.message, 400));
     }
-    res.status(result?.statusCode || 200).json({
-      status: 'success',
-      message:
-        result?.message || 'Si existe el correo, se envió un link de recuperación',
-    });
   });
 
   resetPassword = catchAsync(async (req, res, next) => {
     const { token } = req.params;
     const { newPassword } = req.body;
-    const result = await this.authService.resetPassword(token, newPassword);
-    if (result?.error) {
-      return next(new AppError(result.message, result.statusCode || 500));
+    try {
+      const result = await this.authService.resetPassword(token, newPassword);
+      res.status(200).json({
+        status: 'success',
+        message: result.message,
+      });
+    } catch (err) {
+      return next(new AppError(err.message, 400));
     }
-    res.status(result?.statusCode || 200).json({
-      status: 'success',
-      message: result?.message || 'Contraseña restablecida correctamente',
-    });
   });
 }
 
